@@ -1,16 +1,16 @@
 name: 'Update and Deploy ECS Task'
 description: 'Update and Deploy ECS Task'
 inputs:
-  ecs-cluster:  
+  ecs-cluster:
     description: 'ECS Cluster'
     required: true
-  ecs-service:  
+  ecs-service:
     description: 'ECS Service'
     required: true
-  task-definition-name:  
+  task-definition-name:
     description: 'Name of Task Definition'
     required: true
-  docker-url:  
+  docker-url:
     description: 'URL of Docker Image'
     required: true
 runs:
@@ -24,7 +24,7 @@ runs:
       env:
         IMAGE_TAG: ${{ github.sha }}
       shell: bash
-      run: jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = "${{ inputs.docker-url }} | .containerDefinitions[0].environment += { "name" : "CONTAINER_VERSION", "value": "${{ env.IMAGE_TAG }}" }"' task-definition.json > updated-task-definition.json
+      run: jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = "${{ inputs.docker-url }}" | .containerDefinitions[0].environment += { "name" : "CONTAINER_VERSION", "value": "${{ env.IMAGE_TAG }}" }' task-definition.json > updated-task-definition.json
 
     - name: Extract ECS Task Definition
       id: task-def
