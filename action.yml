@@ -13,6 +13,9 @@ inputs:
   docker-url:
     description: 'URL of Docker Image'
     required: true
+  image-tag:
+    description: 'Docker Image Tag'
+    required: true
 runs:
   using: "composite"
   steps:
@@ -21,10 +24,8 @@ runs:
       run: aws ecs describe-task-definition --task-definition ${{ inputs.task-definition-name }} --query 'taskDefinition' > task-definition.json
 
     - name: Alter ECS Task Definition
-      env:
-        IMAGE_TAG: ${{ github.sha }}
       shell: bash
-      run: jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = "${{ inputs.docker-url }}" | .containerDefinitions[0].environment += { "name" : "CONTAINER_VERSION", "value": "${{ env.IMAGE_TAG }}" }' task-definition.json > updated-task-definition.json
+      run: jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = "${{ inputs.docker-url }}" | .containerDefinitions[0].environment += { "name" : "CONTAINER_VERSION", "value": "${{ inputs.image-tag }}" }' task-definition.json > updated-task-definition.json
 
     - name: Extract ECS Task Definition
       id: task-def
