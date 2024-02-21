@@ -1,0 +1,42 @@
+name: 'Update and Deploy ECS Task'
+description: 'Update and Deploy ECS Task'
+inputs:
+  ecs-cluster:  
+    description: 'ECS Cluster'
+    required: true
+  ecs-service:  
+    description: 'ECS Service'
+    required: true
+  task-definition-name:  
+    description: 'Name of Task Definition'
+    required: true
+  docker-url:  
+    description: 'URL of Docker Image'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Fetch ECS Task Definition
+      shell: bash
+      run: aws ecs describe-task-definition --task-definition ${{ inputs.task-definition-name }} --query 'taskDefinition' > task-definition.json
+
+    - name: Alter ECS Task Definition
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      shell: bash
+      run: jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = "${{ inputs.docker-url }}"' task-definition.json > updated-task-definition.json
+
+    - name: Extract ECS Task Definition
+      id: task-def
+      shell: bash
+      run: |
+        NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://updated-task-definition.json --query 'taskDefinition.taskDefinitionArn')
+        echo "::set-output name=task-definition::$NEW_TASK_DEF_ARN"
+
+    - name: Deploy Amazon ECS task definition
+      shell: bash
+      run: aws ecs update-service --cluster ${{ inputs.ecs-cluster }} --service ${{ inputs.ecs-service }} --task-definition ${{ steps.task-def.outputs.task-definition }}
+
+    - name: Wait for Service Stability
+      shell: bash
+      run: aws ecs wait services-stable --cluster ${{ inputs.ecs-cluster }} --service ${{ inputs.ecs-service }}
